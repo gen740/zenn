@@ -47,7 +47,7 @@ export const parseBlock = async (
   blocks: ListBlockChildrenResponse,
   level: number = 0,
   parentType: BlockObjectResponse['type'] | null = null,
-  quoteLevel: number = 0
+  quoteLevel: number = 0,
 ) => {
   let markdown_result = ''
   let lastType: BlockObjectResponse['type'] | null = null;
@@ -64,17 +64,17 @@ export const parseBlock = async (
       }
       case 'heading_1': {
         const rich_text = parseRichText(b.heading_1.rich_text, quoteLevel);
-        markdown_result += `${'>'.repeat(quoteLevel)}\n${'>'.repeat(quoteLevel)}${INDENT_CHAR.repeat(level - quoteLevel)}# ${rich_text}\n`;
+        markdown_result += `${'>'.repeat(quoteLevel)}\n${'>'.repeat(quoteLevel)}# ${rich_text}\n`;
         break;
       }
       case 'heading_2': {
         const rich_text = parseRichText(b.heading_2.rich_text, quoteLevel);
-        markdown_result += `${'>'.repeat(quoteLevel)}\n${'>'.repeat(quoteLevel)}${INDENT_CHAR.repeat(level - quoteLevel)}## ${rich_text}\n`;
+        markdown_result += `${'>'.repeat(quoteLevel)}\n${'>'.repeat(quoteLevel)}## ${rich_text}\n`;
         break;
       }
       case 'heading_3': {
         const rich_text = parseRichText(b.heading_3.rich_text, quoteLevel);
-        markdown_result += `${'>'.repeat(quoteLevel)}\n${'>'.repeat(quoteLevel)}${INDENT_CHAR.repeat(level - quoteLevel)}### ${rich_text}\n`;
+        markdown_result += `${'>'.repeat(quoteLevel)}\n${'>'.repeat(quoteLevel)}### ${rich_text}\n`;
         break;
       }
       case 'bulleted_list_item': {
@@ -88,9 +88,9 @@ export const parseBlock = async (
       case 'numbered_list_item': {
         const rich_text = parseRichText(b.numbered_list_item.rich_text, quoteLevel);
         if (lastType !== 'numbered_list_item' && parentType !== 'numbered_list_item') {
-          markdown_result += '\n';
+          markdown_result += `${'>'.repeat(quoteLevel)}\n`;
         }
-        markdown_result += `${INDENT_CHAR.repeat(level)}1. ${rich_text}\n`;
+        markdown_result += `${'>'.repeat(quoteLevel)}${INDENT_CHAR.repeat(level - quoteLevel)}1. ${rich_text}\n`;
         break;
       }
       case "quote": {
@@ -99,11 +99,24 @@ export const parseBlock = async (
           markdown_result += `${'>'.repeat(quoteLevel)}\n`;
         }
         markdown_result += `${INDENT_CHAR.repeat(level - quoteLevel)}${'>'.repeat(quoteLevel + 1)}${rich_text}\n`;
+        break;
       }
-      case "to_do":
+      case "to_do": {
+        const rich_text = parseRichText(b.to_do.rich_text, quoteLevel);
+        if (lastType !== 'to_do' && parentType !== 'to_do') {
+          markdown_result += `${'>'.repeat(quoteLevel)}\n`;
+        }
+        markdown_result += `${'>'.repeat(quoteLevel)}${INDENT_CHAR.repeat(level - quoteLevel)}- [ ] ${rich_text}\n`;
         break;
-      case "toggle":
+      }
+      case "toggle": {
+        const rich_text = parseRichText(b.toggle.rich_text, quoteLevel);
+        if (lastType !== 'toggle') {
+          markdown_result += `${'>'.repeat(quoteLevel)}\n`;
+        }
+        markdown_result += `${'>'.repeat(quoteLevel)}:::details ${rich_text}\n`;
         break;
+      }
       case "template":
         break;
       case "synced_block":
@@ -169,6 +182,9 @@ export const parseBlock = async (
         markdown_result += await parseBlock(notion, c, level + 1, b.type, quoteLevel);
       }
     }
+  }
+  if (parentType === 'toggle') {
+    markdown_result += `\n${'>'.repeat(quoteLevel)}:::`;
   }
   return markdown_result
 }
