@@ -116,7 +116,10 @@ export const parseBlock = async (
         break;
       case "code":
         const rich_text = parseRichText(b.code.rich_text, quoteLevel);
-        markdown_result += `${INDENT_CHAR.repeat(level)}\`\`\`${convertCodeblockLanguage(b.code.language)}\n${rich_text}${INDENT_CHAR.repeat(level)}\`\`\`\n`;
+        if (lastType !== 'code') {
+          markdown_result += `${'>'.repeat(quoteLevel)}\n`;
+        }
+        markdown_result += `${'>'.repeat(quoteLevel)}\`\`\`${convertCodeblockLanguage(b.code.language)}\n${'>'.repeat(quoteLevel)}${rich_text}\n${'>'.repeat(quoteLevel)}\`\`\`\n`;
         break;
       case "callout":
         break;
