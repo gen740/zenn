@@ -9,6 +9,7 @@ import {
 import { convertCodeblockLanguage } from "./CodeblockLanguageConverter";
 
 const INDENT_CHAR = '    ';
+const MAX_CALLOUT_LEVEL = 5 + 3;
 
 export const parseRichText = (
   richText: RichTextItemResponse[] | undefined,
@@ -31,7 +32,6 @@ export const parseRichText = (
       if (text.annotations.code) {
         surrounder.push('`');
       }
-
       if (text.href !== null) {
         res += `[${surrounder.join('') + text.plain_text + surrounder.reverse().join('')}](${text.href})`;
       } else {
@@ -48,6 +48,7 @@ export const parseBlock = async (
   level: number = 0,
   parentType: BlockObjectResponse['type'] | null = null,
   quoteLevel: number = 0,
+  calloutLevel: number = 0
 ) => {
   let markdown_result = ''
   let lastType: BlockObjectResponse['type'] | null = null;
@@ -56,7 +57,7 @@ export const parseBlock = async (
     switch (b.type) {
       case 'paragraph': {
         let rich_text = parseRichText(b.paragraph.rich_text, quoteLevel);
-        if (lastType !== 'paragraph') {
+        if (lastType !== 'paragraph' && parentType !== 'toggle') {
           markdown_result += `${'>'.repeat(quoteLevel)}\n`;
         }
         markdown_result += `${'>'.repeat(quoteLevel)}${rich_text}\n`;
@@ -111,10 +112,11 @@ export const parseBlock = async (
       }
       case "toggle": {
         const rich_text = parseRichText(b.toggle.rich_text, quoteLevel);
-        if (lastType !== 'toggle') {
+        if (parentType !== 'toggle') {
           markdown_result += `${'>'.repeat(quoteLevel)}\n`;
         }
-        markdown_result += `${'>'.repeat(quoteLevel)}:::details ${rich_text}\n`;
+        markdown_result += `${'>'.repeat(quoteLevel)}${':'.repeat(MAX_CALLOUT_LEVEL - calloutLevel)}details ${rich_text}\n`;
+        calloutLevel++;
         break;
       }
       case "template":
@@ -126,17 +128,32 @@ export const parseBlock = async (
       case "child_database":
         break;
       case "equation":
+        markdown_result += `${'>'.repeat(quoteLevel)}\n`;
+        markdown_result += `${'>'.repeat(quoteLevel)}$$\n${b.equation.expression}\n`;
+        markdown_result += `$$\n`;
         break;
-      case "code":
+      case "code": {
         const rich_text = parseRichText(b.code.rich_text, quoteLevel);
         if (lastType !== 'code') {
           markdown_result += `${'>'.repeat(quoteLevel)}\n`;
         }
         markdown_result += `${'>'.repeat(quoteLevel)}\`\`\`${convertCodeblockLanguage(b.code.language)}\n${'>'.repeat(quoteLevel)}${rich_text}\n${'>'.repeat(quoteLevel)}\`\`\`\n`;
         break;
-      case "callout":
+      }
+      case "callout": {
+        const rich_text = parseRichText(b.callout.rich_text, quoteLevel);
+        if (lastType !== 'callout') {
+          markdown_result += `${'>'.repeat(quoteLevel)}\n`;
+        }
+        markdown_result += `${'>'.repeat(quoteLevel)}${':'.repeat(MAX_CALLOUT_LEVEL - calloutLevel)}message\n${'>'.repeat(quoteLevel)}${rich_text}\n`;
+        calloutLevel++;
         break;
+      }
       case "divider":
+        if (lastType !== 'divider') {
+          markdown_result += `${'>'.repeat(quoteLevel)}\n`;
+        }
+        markdown_result += `${'>'.repeat(quoteLevel)}${'-'.repeat(10)}\n`;
         break;
       case "breadcrumb":
         break;
@@ -149,6 +166,7 @@ export const parseBlock = async (
       case "link_to_page":
         break;
       case "table":
+        console.log(b);
         break;
       case "table_row":
         break;
@@ -171,20 +189,22 @@ export const parseBlock = async (
       case "unsupported":
         break;
     }
-    lastType = b.type;
     if (b.has_children) {
       const c = await notion.blocks.children.list({
         block_id: b.id
       })
-      if (lastType === 'quote') {
-        markdown_result += await parseBlock(notion, c, level + 1, b.type, quoteLevel + 1);
+      if (b.type === 'quote') {
+        markdown_result += await parseBlock(notion, c, level + 1, b.type, quoteLevel + 1, calloutLevel);
       } else {
-        markdown_result += await parseBlock(notion, c, level + 1, b.type, quoteLevel);
+        markdown_result += await parseBlock(notion, c, level + 1, b.type, quoteLevel, calloutLevel);
       }
     }
-  }
-  if (parentType === 'toggle') {
-    markdown_result += `\n${'>'.repeat(quoteLevel)}:::`;
+    if (b.type === 'toggle' || b.type === 'callout') {
+      calloutLevel--;
+      markdown_result += `${'>'.repeat(quoteLevel)}${':'.repeat(MAX_CALLOUT_LEVEL - calloutLevel)}\n`;
+    }
+
+    lastType = b.type;
   }
   return markdown_result
 }
