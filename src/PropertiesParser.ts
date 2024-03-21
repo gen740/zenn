@@ -4,13 +4,13 @@ import {
 
 
 export const parseProperties = (pageinfo: PageObjectResponse) => {
-  let markdown_result = '---\n';
+  let result:string[] = ['---'];
 
   // Title Section
   if (pageinfo.properties['Title'] !== undefined
     && pageinfo.properties['Title'].type === "title"
   ) {
-    markdown_result += `title: "${pageinfo.properties['Title'].title[0].plain_text}"\n`;
+    result.push(`title: "${pageinfo.properties['Title'].title[0].plain_text}"`);
   } else {
     throw new Error("No title found");
   }
@@ -20,7 +20,7 @@ export const parseProperties = (pageinfo: PageObjectResponse) => {
     && pageinfo.properties['emoji'].type === "rich_text"
     && pageinfo.properties['emoji'].rich_text.length > 0
   ) {
-    markdown_result += `emoji: "${pageinfo.properties['emoji'].rich_text[0].plain_text}"\n`;
+    result.push(`emoji: "${pageinfo.properties['emoji'].rich_text[0].plain_text}"`);
   } else {
     throw new Error("No emoji found");
   }
@@ -31,7 +31,7 @@ export const parseProperties = (pageinfo: PageObjectResponse) => {
     && pageinfo.properties['type'].select
     && pageinfo.properties['type'].select.name
   ) {
-    markdown_result += `type: "${pageinfo.properties['type'].select.name}"\n`;
+    result.push(`type: "${pageinfo.properties['type'].select.name}"`);
   } else {
     throw new Error("No type found");
   }
@@ -41,11 +41,11 @@ export const parseProperties = (pageinfo: PageObjectResponse) => {
     && pageinfo.properties['topics'].type === "multi_select"
     && pageinfo.properties['topics'].multi_select
   ) {
-    markdown_result += `topics: [`;
+    let topics:string[] = [];
     pageinfo.properties['topics'].multi_select.forEach((topic) => {
-      markdown_result += `"${topic.name}", `;
+      topics.push(topic.name);
     })
-    markdown_result += `]\n`;
+    result.push(`topics: [${topics.join(', ')}]`);
   } else {
     throw new Error("No topic found");
   }
@@ -54,11 +54,11 @@ export const parseProperties = (pageinfo: PageObjectResponse) => {
   if (pageinfo.properties['published']
     && pageinfo.properties['published'].type === "checkbox"
   ) {
-    markdown_result += `published: ${pageinfo.properties['published'].checkbox}\n`;
+    result.push(`published: ${pageinfo.properties['published'].checkbox}`);
   } else {
     throw new Error("No published found");
   }
 
-  markdown_result += '---\n\n';
-  return markdown_result;
+  result.push('---');
+  return result;
 }

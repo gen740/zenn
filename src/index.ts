@@ -36,11 +36,11 @@ const main = (async () => {
       continue;
     }
 
-    let markdown_result = parseProperties(page as PageObjectResponse);
-    markdown_result += await parseBlock(notion, await notion.blocks.children.list({
+    let zenn_markdown = parseProperties(page as PageObjectResponse);
+    zenn_markdown = zenn_markdown.concat(await parseBlock(notion, await notion.blocks.children.list({
       block_id: page.id,
-    }));
-    fs.writeFile(`${OUTPUT_DIR}/${page.id}.md`, markdown_result, (err) => {
+    })));
+    fs.writeFile(`${OUTPUT_DIR}/${page.id}.md`, zenn_markdown.join('\n'), (err) => {
       if (err) {
         console.error(err);
         return;
