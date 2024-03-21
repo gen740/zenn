@@ -12,13 +12,12 @@ const INDENT_CHAR = '    ';
 const MAX_CALLOUT_LEVEL = 5 + 3;
 
 export const parseRichText = (
-  richText: RichTextItemResponse[] | undefined,
+  richText: RichTextItemResponse[],
   quoteLevel: number = 0
 ) => {
   let res = '';
-  if (richText === undefined) {
-  } else {
-    richText.forEach((text) => {
+  richText.forEach((text) => {
+    if (text.type === 'text') {
       let surrounder: string[] = [];
       if (text.annotations.bold) {
         surrounder.push('**');
@@ -37,8 +36,10 @@ export const parseRichText = (
       } else {
         res += surrounder.join('') + text.plain_text + surrounder.reverse().join('');
       }
-    });
-  }
+    } else if (text.type === 'equation') {
+      res += `$${text.equation.expression}$`;
+    }
+  });
   return res.split('\n').join(`\n${'>'.repeat(quoteLevel)}`);
 }
 
