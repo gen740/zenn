@@ -1,0 +1,21 @@
+name: Sync
+
+on: push
+
+
+jobs:
+  sync_to_notion:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Other steps that change files in the repository
+      - name: Install npm
+        run: |
+          npm i
+          npm run sync
+
+      # Commit all changed files back to the repository
+      - uses: stefanzweifel/git-auto-commit-action@v5
