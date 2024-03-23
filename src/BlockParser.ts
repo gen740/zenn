@@ -173,7 +173,7 @@ export const parseBlock = async (
         result.push(
           `${":".repeat(MAX_CALLOUT_LEVEL - thisCalloutLevel)}message`,
         );
-        result.push(`${rich_text}`);
+        result = [...result, ...rich_text];
         thisCalloutLevel++;
         break;
       }
