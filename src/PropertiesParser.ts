@@ -15,14 +15,8 @@ export const parseProperties = (pageinfo: PageObjectResponse) => {
   }
 
   // Emoji Section
-  if (
-    pageinfo.properties.emoji &&
-    pageinfo.properties.emoji.type === "rich_text" &&
-    pageinfo.properties.emoji.rich_text.length > 0
-  ) {
-    result.push(
-      `emoji: "${pageinfo.properties.emoji.rich_text[0].plain_text}"`,
-    );
+  if (pageinfo.icon !== null && pageinfo.icon.type === "emoji") {
+    result.push(`emoji: "${pageinfo.icon.emoji}"`);
   } else {
     throw new Error("No emoji found");
   }
