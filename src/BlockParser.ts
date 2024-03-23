@@ -160,7 +160,13 @@ export const parseBlock = async (
         if (lastType !== "code") {
           result.push("");
         }
-        result.push(`\`\`\`${convertCodeblockLanguage(b.code.language)}`);
+        const fileName =
+          b.code.caption[0]?.plain_text !== undefined
+            ? `:${b.code.caption[0]?.plain_text}`
+            : "";
+        result.push(
+          `\`\`\`${convertCodeblockLanguage(b.code.language)}${fileName}`,
+        );
         result = [...result, ...rich_text];
         result.push("```");
         break;
@@ -229,13 +235,13 @@ export const parseBlock = async (
           fs.mkdirSync(fileDir, { recursive: true });
           const filePath = `${fileDir}/${fileName}`;
           result.push("");
-          const imageSize =
-            b.image.caption[0]?.plain_text.match(/{size: (.*?)}/)?.[1];
-          result.push(
-            `![${b.image.caption[0]?.plain_text ?? ""}](/${filePath}${
-              imageSize === undefined ? "" : ` ${imageSize}`
-            })`,
-          );
+          const rawCaption = b.image.caption[0]?.plain_text;
+          const imageSize = rawCaption?.match(/size:( =[0-9]*x)/)?.[1];
+          result.push(`![](/${filePath}${imageSize ?? ""})`);
+          const caption = rawCaption?.replace(/size: =[0-9]*x/g, "").trim();
+          if (caption !== undefined) {
+            result.push(`*${caption}*`);
+          }
           https
             .get(b.image.file.url, (res) => {
               if (b.image.type !== "file") {
@@ -255,15 +261,16 @@ export const parseBlock = async (
             });
         } else {
           result.push("");
-          const imageSize =
-            b.image.caption[0]?.plain_text.match(/{size: (.*?)}/)?.[1] ?? "";
-          result.push(
-            `[![${b.image.caption[0]?.plain_text ?? ""}](${
-              b.image.external.url
-            }${imageSize === undefined ? "" : ` ${imageSize}`})](${
-              b.image.external.url
-            })`,
-          );
+          result.push("[");
+          const rawCaption = b.image.caption[0]?.plain_text;
+          const imageSize = rawCaption?.match(/size:( =[0-9]*x)/)?.[1];
+          result.push(`![](${b.image.external.url} ${imageSize ?? ""})`);
+          const caption = rawCaption.replace(/size: =[0-9]*x/g, "").trim();
+          if (caption !== undefined) {
+            result.push(`*${caption}*`);
+          }
+
+          result.push("](${b.image.external.url})");
         }
         break;
       }
