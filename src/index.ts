@@ -49,7 +49,6 @@ const main = async () => {
     zenn_markdown = zenn_markdown.concat(
       await parseBlock(notion, blocks, null, {
         progressBar: bar,
-        listLevel: 0,
         calloutLevel: 0,
       }),
     );

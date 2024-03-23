@@ -53,9 +53,8 @@ export const parseBlock = async (
   parentType: BlockObjectResponse["type"] | null = null,
   opts: {
     progressBar?: cliProgress.SingleBar;
-    listLevel: number;
     calloutLevel: number;
-  } = { progressBar: undefined, listLevel: 0, calloutLevel: 0 },
+  } = { progressBar: undefined, calloutLevel: 0 },
 ): Promise<string[]> => {
   let result: string[] = [];
   let lastType: BlockObjectResponse["type"] | null = null;
@@ -98,7 +97,7 @@ export const parseBlock = async (
         ) {
           result.push("");
         }
-        result.push(`${INDENT_CHAR.repeat(opts.listLevel)}* ${rich_text}`);
+        result.push(`* ${rich_text}`);
         break;
       }
       case "numbered_list_item": {
@@ -109,7 +108,7 @@ export const parseBlock = async (
         ) {
           result.push("");
         }
-        result.push(`${INDENT_CHAR.repeat(opts.listLevel)}1. ${rich_text}`);
+        result.push(`1. ${rich_text}`);
         break;
       }
       case "quote": {
@@ -128,7 +127,7 @@ export const parseBlock = async (
         if (lastType !== "to_do" && parentType !== "to_do") {
           result.push("");
         }
-        result.push(`${INDENT_CHAR.repeat(opts.listLevel)}- [ ] ${rich_text}`);
+        result.push(`- [ ] ${rich_text}`);
         break;
       }
       case "toggle": {
@@ -288,7 +287,6 @@ export const parseBlock = async (
       switch (b.type) {
         case "quote": {
           const child = await parseBlock(notion, c, b.type, {
-            listLevel: opts.listLevel,
             calloutLevel: thisCalloutLevel,
           });
           result = [...result, ...child.map((line) => `>${line}`)];
@@ -296,7 +294,6 @@ export const parseBlock = async (
         }
         case "table": {
           const child = await parseBlock(notion, c, b.type, {
-            listLevel: opts.listLevel,
             calloutLevel: thisCalloutLevel,
           });
           if (child.length < 2) {
@@ -310,14 +307,27 @@ export const parseBlock = async (
           result = [...result, ...child];
           break;
         }
-        default: {
+        case "toggle":
+        case "callout": {
           result = [
             ...result,
             ...(await parseBlock(notion, c, b.type, {
-              listLevel: opts.listLevel + 1,
               calloutLevel: thisCalloutLevel,
             })),
           ];
+          break;
+        }
+        default: {
+          let children = await parseBlock(notion, c, b.type, {
+            calloutLevel: thisCalloutLevel,
+          });
+          children = children.map((line) => {
+            if (line === "") {
+              return "";
+            }
+            return `${INDENT_CHAR}${line}`;
+          });
+          result = [...result, ...children];
           break;
         }
       }
