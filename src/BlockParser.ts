@@ -9,6 +9,7 @@ import type {
 import { convertCodeblockLanguage } from "./CodeblockLanguageConverter";
 import * as https from "node:https";
 import * as fs from "node:fs";
+import type * as cliProgress from "cli-progress";
 
 const INDENT_CHAR = "    ";
 const MAX_CALLOUT_LEVEL = 5 + 3;
@@ -50,13 +51,17 @@ export const parseBlock = async (
   notion: Client,
   blocks: ListBlockChildrenResponse,
   parentType: BlockObjectResponse["type"] | null = null,
-  listLevel = 0,
-  calloutLevel = 0,
+  opts: {
+    progressBar?: cliProgress.SingleBar;
+    listLevel: number;
+    calloutLevel: number;
+  } = { progressBar: undefined, listLevel: 0, calloutLevel: 0 },
 ): Promise<string[]> => {
   let result: string[] = [];
   let lastType: BlockObjectResponse["type"] | null = null;
-  let thisCalloutLevel = calloutLevel;
+  let thisCalloutLevel = opts.calloutLevel;
   for (const block of blocks.results) {
+    opts.progressBar?.increment();
     const b = block as BlockObjectResponse;
     switch (b.type) {
       case "paragraph": {
@@ -93,7 +98,7 @@ export const parseBlock = async (
         ) {
           result.push("");
         }
-        result.push(`${INDENT_CHAR.repeat(listLevel)}* ${rich_text}`);
+        result.push(`${INDENT_CHAR.repeat(opts.listLevel)}* ${rich_text}`);
         break;
       }
       case "numbered_list_item": {
@@ -104,7 +109,7 @@ export const parseBlock = async (
         ) {
           result.push("");
         }
-        result.push(`${INDENT_CHAR.repeat(listLevel)}1. ${rich_text}`);
+        result.push(`${INDENT_CHAR.repeat(opts.listLevel)}1. ${rich_text}`);
         break;
       }
       case "quote": {
@@ -123,7 +128,7 @@ export const parseBlock = async (
         if (lastType !== "to_do" && parentType !== "to_do") {
           result.push("");
         }
-        result.push(`${INDENT_CHAR.repeat(listLevel)}- [ ] ${rich_text}`);
+        result.push(`${INDENT_CHAR.repeat(opts.listLevel)}- [ ] ${rich_text}`);
         break;
       }
       case "toggle": {
@@ -282,24 +287,18 @@ export const parseBlock = async (
       });
       switch (b.type) {
         case "quote": {
-          const child = await parseBlock(
-            notion,
-            c,
-            b.type,
-            listLevel,
-            thisCalloutLevel,
-          );
+          const child = await parseBlock(notion, c, b.type, {
+            listLevel: opts.listLevel,
+            calloutLevel: thisCalloutLevel,
+          });
           result = [...result, ...child.map((line) => `>${line}`)];
           break;
         }
         case "table": {
-          const child = await parseBlock(
-            notion,
-            c,
-            b.type,
-            listLevel,
-            thisCalloutLevel,
-          );
+          const child = await parseBlock(notion, c, b.type, {
+            listLevel: opts.listLevel,
+            calloutLevel: thisCalloutLevel,
+          });
           if (child.length < 2) {
             throw new Error("Table row size is less than 2");
           }
@@ -314,13 +313,10 @@ export const parseBlock = async (
         default: {
           result = [
             ...result,
-            ...(await parseBlock(
-              notion,
-              c,
-              b.type,
-              listLevel + 1,
-              thisCalloutLevel,
-            )),
+            ...(await parseBlock(notion, c, b.type, {
+              listLevel: opts.listLevel + 1,
+              calloutLevel: thisCalloutLevel,
+            })),
           ];
           break;
         }
@@ -333,5 +329,6 @@ export const parseBlock = async (
 
     lastType = b.type;
   }
+  opts.progressBar?.stop();
   return result;
 };

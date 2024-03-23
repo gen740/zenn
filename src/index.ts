@@ -4,6 +4,7 @@ import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoint
 
 import { parseBlock } from "./BlockParser";
 import { parseProperties } from "./PropertiesParser";
+import * as cliProgress from "cli-progress";
 
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
@@ -37,13 +38,20 @@ const main = async () => {
       continue;
     }
     let zenn_markdown = parseProperties(page as PageObjectResponse);
+    const blocks = await notion.blocks.children.list({
+      block_id: page.id,
+    });
+    const bar = new cliProgress.SingleBar(
+      {},
+      cliProgress.Presets.shades_classic,
+    );
+    bar.start(blocks.results.length, 0);
     zenn_markdown = zenn_markdown.concat(
-      await parseBlock(
-        notion,
-        await notion.blocks.children.list({
-          block_id: page.id,
-        }),
-      ),
+      await parseBlock(notion, blocks, null, {
+        progressBar: bar,
+        listLevel: 0,
+        calloutLevel: 0,
+      }),
     );
     fs.writeFileSync(`${OUTPUT_DIR}/${page.id}.md`, zenn_markdown.join("\n"));
     console.log(`File ${page.id}.md has been created`);

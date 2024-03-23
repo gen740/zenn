@@ -9,7 +9,6 @@ export const parseProperties = (pageinfo: PageObjectResponse) => {
     pageinfo.properties.Title.type === "title"
   ) {
     const title = pageinfo.properties.Title.title[0].plain_text;
-    console.log(`Prosessing... ${title}`);
     result.push(`title: "${title}"`);
   } else {
     throw new Error("No title found");
