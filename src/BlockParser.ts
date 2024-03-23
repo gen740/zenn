@@ -235,12 +235,18 @@ export const parseBlock = async (
           fs.mkdirSync(fileDir, { recursive: true });
           const filePath = `${fileDir}/${fileName}`;
           result.push("");
-          const rawCaption = b.image.caption[0]?.plain_text;
-          const imageSize = rawCaption?.match(/size:( =[0-9]*x)/)?.[1];
+          const rawCaptions = parseRichText(b.image.caption);
+          const imageSize = rawCaptions.join().match(/size:( =[0-9]*x)/)?.[1];
           result.push(`![](/${filePath}${imageSize ?? ""})`);
-          const caption = rawCaption?.replace(/size: =[0-9]*x/g, "").trim();
-          if (caption !== undefined) {
-            result.push(`*${caption}*`);
+          const caption = rawCaptions
+            .join("\n")
+            .replace(/size: =[0-9]*x/g, "")
+            .trim()
+            .split("\n");
+          if (caption.length > 0) {
+            caption[0] = `*${caption[0]}`;
+            caption[caption.length - 1] = `${caption[caption.length - 1]}*`;
+            result = [...result, ...caption];
           }
           https
             .get(b.image.file.url, (res) => {
@@ -262,14 +268,19 @@ export const parseBlock = async (
         } else {
           result.push("");
           result.push("[");
-          const rawCaption = b.image.caption[0]?.plain_text;
-          const imageSize = rawCaption?.match(/size:( =[0-9]*x)/)?.[1];
+          const rawCaptions = parseRichText(b.image.caption);
+          const imageSize = rawCaptions.join().match(/size:( =[0-9]*x)/)?.[1];
           result.push(`![](${b.image.external.url} ${imageSize ?? ""})`);
-          const caption = rawCaption.replace(/size: =[0-9]*x/g, "").trim();
-          if (caption !== undefined) {
-            result.push(`*${caption}*`);
+          const caption = rawCaptions
+            .join("\n")
+            .replace(/size: =[0-9]*x/g, "")
+            .trim()
+            .split("\n");
+          if (caption.length > 0) {
+            caption[0] = `*${caption[0]}`;
+            caption[caption.length - 1] = `${caption[caption.length - 1]}*`;
+            result = [...result, ...caption];
           }
-
           result.push("](${b.image.external.url})");
         }
         break;
