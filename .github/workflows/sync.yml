@@ -16,6 +16,8 @@ jobs:
         run: |
           npm i
           npm run sync
+        env:
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
 
       # Commit all changed files back to the repository
       - uses: stefanzweifel/git-auto-commit-action@v5
