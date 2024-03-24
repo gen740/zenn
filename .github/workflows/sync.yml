@@ -1,7 +1,9 @@
 name: Sync
 
-on: push
-
+on:
+  push:
+  schedule:
+    - cron: '0 6,18 * * *'
 
 jobs:
   sync_with_notion:
@@ -22,9 +24,9 @@ jobs:
       - name: Get Current time
         id: current_time
         run: |
-           echo "::set-output name=current_time::$(TZ='Asia/Tokyo' date +'%Y-%m-%dT%H:%M:%S')"
+          echo "::set-output name=current_time::$(TZ='Asia/Tokyo' date +'%Y-%m-%dT%H:%M:%S')"
 
       # Commit all changed files back to the repository
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "[${{ steps.current_time.outputs.current_time }}] Sync with notion"
+          commit_message: "[Actions] Sync with notion (${{ steps.current_time.outputs.current_time }})"
