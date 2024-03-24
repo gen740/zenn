@@ -1,11 +1,10 @@
 name: Sync
 
 on:
-  push:
   schedule:
-    - cron: '0 21 * * *' # 6:00 JST (21:00 UTC)
-    - cron: '30 0 * * *' # 9:30 JST (0:30 UTC)
-    - cron: '0 9 * * *' # 18:00 JST (9:00 UTC)
+    - cron: '0 23 * * *' # 8:00  JST (23:00 UTC)
+    - cron: '0 7 * * *'  # 16:00 JST ( 7:00 UTC)
+    - cron: '0 15 * * *' # 24:00 JST (15:00 UTC)
 
 jobs:
   sync_with_notion:
