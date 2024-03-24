@@ -3,7 +3,9 @@ name: Sync
 on:
   push:
   schedule:
-    - cron: '0 6,18 * * *'
+    - cron: '0 21 * * *' # 6:00 JST (21:00 UTC)
+    - cron: '30 0 * * *' # 9:30 JST (0:30 UTC)
+    - cron: '0 9 * * *' # 18:00 JST (9:00 UTC)
 
 jobs:
   sync_with_notion:
@@ -12,21 +14,13 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-
-      # Other steps that change files in the repository
       - name: Install npm and run
-        run: |
-          npm i
-          npm run sync
+        run: npm i && npm run sync
         env:
           NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
-
       - name: Get Current time
         id: current_time
-        run: |
-          echo "::set-output name=current_time::$(TZ='Asia/Tokyo' date +'%Y-%m-%dT%H:%M:%S')"
-
-      # Commit all changed files back to the repository
+        run: echo "CURRENT_TIME=$(TZ='Asia/Tokyo' date +'%Y-%m-%dT%H:%M:%S')" >> $GITHUB_ENV
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "[Actions] Sync with notion (${{ steps.current_time.outputs.current_time }})"
+          commit_message: "[Actions] Sync with notion (${{ env.CURRENT_TIME }})"
