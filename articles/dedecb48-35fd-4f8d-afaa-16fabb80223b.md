@@ -2,7 +2,7 @@
 title: "CMake の環境の組み方"
 emoji: "😫"
 type: "tech"
-topics: [cmake]
+topics: ["cmake"]
 published: false
 ---
 

@@ -1,24 +1,43 @@
 import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
-export const parseProperties = (pageinfo: PageObjectResponse) => {
-  const result: string[] = ["---"];
+type PageProperties = {
+  title: string;
+  emoji: string;
+  type: string;
+  topics: string[];
+  published: boolean;
+  freeze: boolean;
+  slug?: string;
+};
 
-  // Title Section
+export const parseProperties = (
+  pageinfo: PageObjectResponse,
+): PageProperties => {
+  const result: PageProperties = {
+    title: "Title",
+    emoji: "emoji",
+    type: "tech",
+    topics: [] as string[],
+    published: false,
+    freeze: false,
+    slug: undefined,
+  };
+
+  // Emoji
+  if (pageinfo.icon !== null && pageinfo.icon.type === "emoji") {
+    result.emoji = pageinfo.icon.emoji;
+  } else {
+    throw new Error("No emoji found");
+  }
+
+  // Title
   if (
     pageinfo.properties.Title !== undefined &&
     pageinfo.properties.Title.type === "title"
   ) {
-    const title = pageinfo.properties.Title.title[0].plain_text;
-    result.push(`title: "${title}"`);
+    result.title = pageinfo.properties.Title.title[0].plain_text;
   } else {
     throw new Error("No title found");
-  }
-
-  // Emoji Section
-  if (pageinfo.icon !== null && pageinfo.icon.type === "emoji") {
-    result.push(`emoji: "${pageinfo.icon.emoji}"`);
-  } else {
-    throw new Error("No emoji found");
   }
 
   // type Section
@@ -28,7 +47,7 @@ export const parseProperties = (pageinfo: PageObjectResponse) => {
     pageinfo.properties.type.select &&
     pageinfo.properties.type.select.name
   ) {
-    result.push(`type: "${pageinfo.properties.type.select.name}"`);
+    result.type = pageinfo.properties.type.select.name;
   } else {
     throw new Error("No type found");
   }
@@ -43,7 +62,7 @@ export const parseProperties = (pageinfo: PageObjectResponse) => {
     for (const topic of pageinfo.properties.topics.multi_select) {
       topics.push(topic.name);
     }
-    result.push(`topics: [${topics.join(", ")}]`);
+    result.topics = topics;
   } else {
     throw new Error("No topic found");
   }
@@ -53,11 +72,38 @@ export const parseProperties = (pageinfo: PageObjectResponse) => {
     pageinfo.properties.published &&
     pageinfo.properties.published.type === "checkbox"
   ) {
-    result.push(`published: ${pageinfo.properties.published.checkbox}`);
+    result.published = pageinfo.properties.published.checkbox;
   } else {
     throw new Error("No published found");
   }
 
-  result.push("---");
+  // Slug Section
+  if (
+    pageinfo.properties.slug &&
+    pageinfo.properties.slug.type === "rich_text"
+  ) {
+    let slug = pageinfo.properties.slug.rich_text[0]?.plain_text;
+    if (slug === undefined || slug === "") {
+      slug = pageinfo.id;
+    }
+    result.slug = slug;
+  } else {
+    throw new Error("No slug found");
+  }
+
   return result;
+};
+
+export const createHeader = (properties: PageProperties): string[] => {
+  const header: string[] = [];
+  header.push("---");
+  header.push(`title: "${properties.title}"`);
+  header.push(`emoji: "${properties.emoji}"`);
+  header.push(`type: "${properties.type}"`);
+  header.push(
+    `topics: [${properties.topics.map((topic) => `"${topic}"`).join(", ")}]`,
+  );
+  header.push(`published: ${properties.published}`);
+  header.push("---");
+  return header;
 };

@@ -3,12 +3,32 @@ import { Client } from "@notionhq/client";
 import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
 import { parseBlock } from "./BlockParser";
-import { parseProperties } from "./PropertiesParser";
+import { parseProperties, createHeader } from "./PropertiesParser";
 import * as cliProgress from "cli-progress";
 
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
+import stringWidth from "string-width";
+
 const OUTPUT_DIR = "articles";
+
+const normalizeTitle = async (
+  title: string,
+  maxLength = 30,
+): Promise<string> => {
+  let result = title.substring(0, 4);
+  let width = stringWidth(result);
+
+  for (let idx = 4; idx < title.length; idx++) {
+    width += stringWidth(title[idx]);
+    result += title[idx];
+    if (width > maxLength - 2) {
+      break;
+    }
+  }
+  result += " ".repeat(maxLength - width);
+  return result;
+};
 
 const main = async () => {
   const pages = (
@@ -30,19 +50,23 @@ const main = async () => {
     if (page.object !== "page") {
       throw new Error("It's not a page object");
     }
-    const properties = (page as PageObjectResponse).properties;
-    if (
-      properties.freeze.type === "checkbox" &&
-      properties.freeze.checkbox === true
-    ) {
+    const properties = parseProperties(page as PageObjectResponse);
+    if (properties.freeze) {
       continue;
     }
-    let zenn_markdown = parseProperties(page as PageObjectResponse);
+    let zenn_markdown: string[] = createHeader(properties);
+    const pageId = page.id;
     const blocks = await notion.blocks.children.list({
-      block_id: page.id,
+      block_id: pageId,
     });
     const bar = new cliProgress.SingleBar(
-      {},
+      {
+        format: `${await normalizeTitle(
+          properties.emoji + properties.title,
+        )} |{bar}| {percentage}% | {value}/{total} => ${
+          properties.slug ?? pageId
+        }.md`,
+      },
       cliProgress.Presets.shades_classic,
     );
     bar.start(blocks.results.length, 0);
@@ -52,8 +76,10 @@ const main = async () => {
         calloutLevel: 0,
       }),
     );
-    fs.writeFileSync(`${OUTPUT_DIR}/${page.id}.md`, zenn_markdown.join("\n"));
-    console.log(`File ${page.id}.md has been created`);
+    fs.writeFileSync(
+      `${OUTPUT_DIR}/${properties.slug ?? pageId}.md`,
+      zenn_markdown.join("\n"),
+    );
   }
 };
 
