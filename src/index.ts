@@ -66,6 +66,8 @@ const main = async () => {
         )} |{bar}| {percentage}% | {value}/{total} => ${
           properties.slug ?? pageId
         }.md`,
+        noTTYOutput: true,
+        notTTYSchedule: 500,
       },
       cliProgress.Presets.shades_classic,
     );
@@ -80,6 +82,7 @@ const main = async () => {
       `${OUTPUT_DIR}/${properties.slug ?? pageId}.md`,
       zenn_markdown.join("\n"),
     );
+    console.log(`Processed ${properties.title}`);
   }
 };
 

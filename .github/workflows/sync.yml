@@ -15,7 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install npm and run
-        run: npm i && npm run sync
+        run: |
+          npm i
+          npm run sync
         env:
           NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
       - name: Get Current time
