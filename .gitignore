@@ -9,6 +9,7 @@
 cmake_build
 build*
 .build
+lib
 
 # python
 typings
