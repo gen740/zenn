@@ -8,7 +8,7 @@
     "start": "npm run build:live",
     "build": "tsc -p .",
     "build:live": "tsx watch src",
-    "sync": "ts-node src/index.ts"
+    "sync": "tsx src/index.ts"
   },
   "type": "module",
   "keywords": [],
