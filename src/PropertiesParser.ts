@@ -65,12 +65,12 @@ export const parseProperties = (
 
   // published Section
   if (
-    pageinfo.properties.publicated &&
-    pageinfo.properties.publicated.type === "checkbox"
+    pageinfo.properties.published &&
+    pageinfo.properties.published.type === "checkbox"
   ) {
-    result.published = pageinfo.properties.publicated.checkbox;
+    result.published = pageinfo.properties.published.checkbox;
   } else {
-    throw new Error("No publicated found");
+    throw new Error(`No published found: ${result.title}`);
   }
 
   return result;
