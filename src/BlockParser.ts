@@ -7,13 +7,11 @@ import type {
 } from "@notionhq/client/build/src/api-endpoints";
 
 import { convertCodeblockLanguage } from "./CodeblockLanguageConverter";
-import * as https from "node:https";
-import * as fs from "node:fs";
+import { downloadImage } from "./ImageDownloader";
 import type * as cliProgress from "cli-progress";
 
 const INDENT_CHAR = "    ";
 const MAX_CALLOUT_LEVEL = 5 + 3;
-const IMAGE_DIR = "images";
 
 export const parseRichText = (richText: RichTextItemResponse[]): string[] => {
   let res = "";
@@ -232,65 +230,22 @@ export const parseBlock = async (
         break;
       }
       case "image": {
-        if (b.image.type === "file") {
-          const fileName = b.image.file.url
-            .match(/([^\/]+)/g)?.[4]
-            .split("?")[0];
-          if (fileName === undefined) {
-            console.error("Could not get file name");
-            break;
-          }
-          const fileDir = `${IMAGE_DIR}/${b.id}`;
-          fs.mkdirSync(fileDir, { recursive: true });
-          const filePath = `${fileDir}/${fileName}`;
-          result.push("");
-          const rawCaptions = parseRichText(b.image.caption);
-          const imageSize = rawCaptions.join().match(/size:( =[0-9]*x)/)?.[1];
-          result.push(`![](/${filePath}${imageSize ?? ""})`);
-          const caption = rawCaptions
-            .join("\n")
-            .replace(/size: =[0-9]*x/g, "")
-            .trim()
-            .split("\n");
-          if (caption.length > 0) {
-            caption[0] = `*${caption[0]}`;
-            caption[caption.length - 1] = `${caption[caption.length - 1]}*`;
-            result = [...result, ...caption];
-          }
-          https
-            .get(b.image.file.url, (res) => {
-              if (b.image.type !== "file") {
-                throw new Error(
-                  "Image type is not file: This should not happen",
-                );
-              }
-              const fileStream = fs.createWriteStream(filePath);
-              res.pipe(fileStream);
-              fileStream.on("finish", () => {
-                fileStream.close();
-                console.log(`Image downloaded and saved to ${filePath}`);
-              });
-            })
-            .on("error", (e) => {
-              console.error(e);
-            });
-        } else {
-          result.push("");
-          result.push("[");
-          const rawCaptions = parseRichText(b.image.caption);
-          const imageSize = rawCaptions.join().match(/size:( =[0-9]*x)/)?.[1];
-          result.push(`![](${b.image.external.url} ${imageSize ?? ""})`);
-          const caption = rawCaptions
-            .join("\n")
-            .replace(/size: =[0-9]*x/g, "")
-            .trim()
-            .split("\n");
-          if (caption.length > 0) {
-            caption[0] = `*${caption[0]}`;
-            caption[caption.length - 1] = `${caption[caption.length - 1]}*`;
-            result = [...result, ...caption];
-          }
-          result.push("](${b.image.external.url})");
+        const url =
+          b.image.type === "file" ? b.image.file.url : b.image.external.url;
+        const filePath = await downloadImage(url);
+        result.push("");
+        const rawCaptions = parseRichText(b.image.caption);
+        const imageSize = rawCaptions.join().match(/size:( =[0-9]*x)/)?.[1];
+        result.push(`![](/${filePath}${imageSize ?? ""})`);
+        const caption = rawCaptions
+          .join("\n")
+          .replace(/size: =[0-9]*x/g, "")
+          .trim()
+          .split("\n");
+        if (caption.length > 0 && caption[0] !== "") {
+          caption[0] = `*${caption[0]}`;
+          caption[caption.length - 1] = `${caption[caption.length - 1]}*`;
+          result = [...result, ...caption];
         }
         break;
       }
