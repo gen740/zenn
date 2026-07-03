@@ -7,7 +7,7 @@ import type {
 } from "@notionhq/client/build/src/api-endpoints";
 
 import { convertCodeblockLanguage } from "./CodeblockLanguageConverter";
-import { downloadImage } from "./ImageDownloader";
+import { downloadMedia } from "./ImageDownloader";
 import type * as cliProgress from "cli-progress";
 
 const INDENT_CHAR = "    ";
@@ -43,6 +43,27 @@ export const parseRichText = (richText: RichTextItemResponse[]): string[] => {
     }
   }
   return res.split("\n");
+};
+
+const renderMediaReference = (
+  filePath: string,
+  captionRichText: RichTextItemResponse[],
+): string[] => {
+  let result: string[] = [""];
+  const rawCaptions = parseRichText(captionRichText);
+  const imageSize = rawCaptions.join().match(/size:( =[0-9]*x)/)?.[1];
+  result.push(`![](/${filePath}${imageSize ?? ""})`);
+  const caption = rawCaptions
+    .join("\n")
+    .replace(/size: =[0-9]*x/g, "")
+    .trim()
+    .split("\n");
+  if (caption.length > 0 && caption[0] !== "") {
+    caption[0] = `*${caption[0]}`;
+    caption[caption.length - 1] = `${caption[caption.length - 1]}*`;
+    result = [...result, ...caption];
+  }
+  return result;
 };
 
 export const parseBlock = async (
@@ -232,26 +253,17 @@ export const parseBlock = async (
       case "image": {
         const url =
           b.image.type === "file" ? b.image.file.url : b.image.external.url;
-        const filePath = await downloadImage(url);
-        result.push("");
-        const rawCaptions = parseRichText(b.image.caption);
-        const imageSize = rawCaptions.join().match(/size:( =[0-9]*x)/)?.[1];
-        result.push(`![](/${filePath}${imageSize ?? ""})`);
-        const caption = rawCaptions
-          .join("\n")
-          .replace(/size: =[0-9]*x/g, "")
-          .trim()
-          .split("\n");
-        if (caption.length > 0 && caption[0] !== "") {
-          caption[0] = `*${caption[0]}`;
-          caption[caption.length - 1] = `${caption[caption.length - 1]}*`;
-          result = [...result, ...caption];
-        }
+        const filePath = await downloadMedia(url);
+        result = [...result, ...renderMediaReference(filePath, b.image.caption)];
         break;
       }
-      case "video":
-        console.log("Video block is not supported");
+      case "video": {
+        const url =
+          b.video.type === "file" ? b.video.file.url : b.video.external.url;
+        const filePath = await downloadMedia(url);
+        result = [...result, ...renderMediaReference(filePath, b.video.caption)];
         break;
+      }
       case "pdf":
         console.log("PDF block is not supported");
         break;
