@@ -19,7 +19,8 @@ jobs:
           npm i
           npm run sync
         env:
-          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_API_TOKEN: ${{ secrets.NOTION_API_TOKEN }}
+          NOTION_ARTICLE_DATABASE_ID: ${{ secrets.NOTION_ARTICLE_DATABASE_ID }}
       - name: Get Current time
         id: current_time
         run: echo "CURRENT_TIME=$(TZ='Asia/Tokyo' date +'%Y-%m-%dT%H:%M:%S')" >> $GITHUB_ENV

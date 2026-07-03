@@ -26,3 +26,6 @@ target
 
 # secrets
 .env
+
+# direnv
+.direnv/

@@ -1,14 +1,19 @@
 import * as fs from "node:fs";
-import { Client } from "@notionhq/client";
-import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import { Client, isFullPage } from "@notionhq/client";
 
 import { parseBlock } from "./BlockParser";
 import { parseProperties, createHeader } from "./PropertiesParser";
 import * as cliProgress from "cli-progress";
 
-const notion = new Client({ auth: process.env.NOTION_API_KEY });
-
 import stringWidth from "string-width";
+
+// Local development reads .env at the repository root; on CI the variables
+// are injected by the workflow instead.
+try {
+  process.loadEnvFile(".env");
+} catch {}
+
+const notion = new Client({ auth: process.env.NOTION_API_TOKEN });
 
 const OUTPUT_DIR = "articles";
 
@@ -31,41 +36,44 @@ const normalizeTitle = async (
 };
 
 const main = async () => {
+  const databaseId = process.env.NOTION_ARTICLE_DATABASE_ID;
+  if (databaseId === undefined) {
+    throw new Error("NOTION_ARTICLE_DATABASE_ID is not set");
+  }
+
   const pages = (
-    await notion.search({
-      query: "",
+    await notion.databases.query({
+      database_id: databaseId,
       filter: {
-        property: "object",
-        value: "page",
+        property: "to be updated",
+        checkbox: {
+          equals: true,
+        },
       },
-      sort: {
-        direction: "ascending",
-        timestamp: "last_edited_time",
-      },
+      sorts: [
+        {
+          property: "Create Date",
+          direction: "ascending",
+        },
+      ],
     })
   ).results;
 
   // TODO(gen740): Make this parallel
   for (const page of pages) {
-    if (page.object !== "page") {
-      throw new Error("It's not a page object");
+    if (!isFullPage(page)) {
+      throw new Error("It's not a full page object");
     }
-    const properties = parseProperties(page as PageObjectResponse);
-    if (properties.freeze) {
-      continue;
-    }
+    const properties = parseProperties(page);
     let zenn_markdown: string[] = createHeader(properties);
-    const pageId = page.id;
     const blocks = await notion.blocks.children.list({
-      block_id: pageId,
+      block_id: page.id,
     });
     const bar = new cliProgress.SingleBar(
       {
         format: `${await normalizeTitle(
           properties.emoji + properties.title,
-        )} |{bar}| {percentage}% | {value}/{total} => ${
-          properties.slug ?? pageId
-        }.md`,
+        )} |{bar}| {percentage}% | {value}/{total} => ${properties.slug}.md`,
         noTTYOutput: true,
         notTTYSchedule: 500,
       },
@@ -79,7 +87,7 @@ const main = async () => {
       }),
     );
     fs.writeFileSync(
-      `${OUTPUT_DIR}/${properties.slug ?? pageId}.md`,
+      `${OUTPUT_DIR}/${properties.slug}.md`,
       zenn_markdown.join("\n"),
     );
     console.log(`Processed ${properties.title}`);

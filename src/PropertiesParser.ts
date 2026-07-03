@@ -6,89 +6,71 @@ type PageProperties = {
   type: string;
   topics: string[];
   published: boolean;
-  freeze: boolean;
-  slug?: string;
+  slug: string;
 };
+
+const DEFAULT_EMOJI = "📝";
+const DEFAULT_TYPE = "tech";
 
 export const parseProperties = (
   pageinfo: PageObjectResponse,
 ): PageProperties => {
   const result: PageProperties = {
     title: "Title",
-    emoji: "emoji",
-    type: "tech",
-    topics: [] as string[],
+    emoji: DEFAULT_EMOJI,
+    type: DEFAULT_TYPE,
+    topics: [],
     published: false,
-    freeze: false,
-    slug: undefined,
+    slug: pageinfo.id,
   };
 
   // Emoji
   if (pageinfo.icon !== null && pageinfo.icon.type === "emoji") {
     result.emoji = pageinfo.icon.emoji;
-  } else {
-    throw new Error("No emoji found");
   }
 
-  // Title
-  if (
-    pageinfo.properties.Title !== undefined &&
-    pageinfo.properties.Title.type === "title"
-  ) {
-    result.title = pageinfo.properties.Title.title[0].plain_text;
-  } else {
+  // Title: locate by property type, not by name (the database column may be
+  // renamed freely on the Notion side)
+  const titleProperty = Object.values(pageinfo.properties).find(
+    (property) => property.type === "title",
+  );
+  if (titleProperty?.type !== "title" || titleProperty.title.length === 0) {
     throw new Error("No title found");
   }
+  result.title = titleProperty.title.map((text) => text.plain_text).join("");
 
   // type Section
   if (
     pageinfo.properties.type &&
     pageinfo.properties.type.type === "select" &&
-    pageinfo.properties.type.select &&
-    pageinfo.properties.type.select.name
+    pageinfo.properties.type.select
   ) {
     result.type = pageinfo.properties.type.select.name;
   } else {
-    throw new Error("No type found");
+    throw new Error(`No type found: ${result.title}`);
   }
 
-  // topic Section
+  // topics Section
   if (
     pageinfo.properties.topics &&
     pageinfo.properties.topics.type === "multi_select" &&
-    pageinfo.properties.topics.multi_select
+    pageinfo.properties.topics.multi_select.length > 0
   ) {
-    const topics: string[] = [];
-    for (const topic of pageinfo.properties.topics.multi_select) {
-      topics.push(topic.name);
-    }
-    result.topics = topics;
+    result.topics = pageinfo.properties.topics.multi_select.map(
+      (topic) => topic.name,
+    );
   } else {
-    throw new Error("No topic found");
+    throw new Error(`No topics found: ${result.title}`);
   }
 
   // published Section
   if (
-    pageinfo.properties.published &&
-    pageinfo.properties.published.type === "checkbox"
+    pageinfo.properties.publicated &&
+    pageinfo.properties.publicated.type === "checkbox"
   ) {
-    result.published = pageinfo.properties.published.checkbox;
+    result.published = pageinfo.properties.publicated.checkbox;
   } else {
-    throw new Error("No published found");
-  }
-
-  // Slug Section
-  if (
-    pageinfo.properties.slug &&
-    pageinfo.properties.slug.type === "rich_text"
-  ) {
-    let slug = pageinfo.properties.slug.rich_text[0]?.plain_text;
-    if (slug === undefined || slug === "") {
-      slug = pageinfo.id;
-    }
-    result.slug = slug;
-  } else {
-    throw new Error("No slug found");
+    throw new Error("No publicated found");
   }
 
   return result;
