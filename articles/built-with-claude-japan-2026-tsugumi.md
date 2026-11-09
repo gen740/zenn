@@ -3,7 +3,7 @@ title: "Built with Claude: Japan 2026 に出場した件"
 emoji: "🔭"
 type: "idea"
 topics: ["claude", "ai", "hackathon", "研究", "セキュリティ"]
-published: true
+published: false
 ---
 
 [Built with Claude: Japan 2026](https://cerebralvalley.ai/e/built-with-claude-japan2026) に出場しました。
